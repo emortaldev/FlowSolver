@@ -1,6 +1,5 @@
 # FlowSolver
 Android app that solves puzzles from Flow Free
 
-
-https://github.com/user-attachments/assets/924b5181-1c75-459a-827c-81c50ed7490e
+https://github.com/user-attachments/assets/6449e97d-24c0-43df-a641-97d9b21b0b26
 
