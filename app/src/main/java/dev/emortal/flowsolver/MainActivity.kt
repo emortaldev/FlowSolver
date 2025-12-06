@@ -14,7 +14,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,7 +45,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
@@ -85,11 +87,9 @@ fun FlowSolver(modifier: Modifier = Modifier) {
     var flowStatusText by remember { mutableStateOf("") }
 
     // Buttons / Switches
-    var visualize by remember { mutableStateOf(true) }
     var slow by remember { mutableStateOf(false) }
 
     // Solver data
-    var gridStates: Array<ByteArray>? by remember { mutableStateOf(null) }
     var flowColors by remember { mutableStateOf(listOf(Color.Black)) }
     var startTimestamp by remember { mutableLongStateOf(0L) }
     var flowSolver: FlowSolverInterface? by remember { mutableStateOf(null) }
@@ -107,15 +107,16 @@ fun FlowSolver(modifier: Modifier = Modifier) {
 
             COROUTINE_SCOPE.launch(handler) {
                 flowSolver?.cancel()
-                flowSolver = FlowSolverArray(slow)
-
-                val success = flowSolver!!.detect(context, uri)
+                val newFlowSolver = FlowSolverArray(slow)
+                val success = newFlowSolver.detect(context, uri)
 
                 if (!success) {
-                    gridStates = null
                     flowStatusText = "Could not find flows in screenshot"
+                    flowSolver = null
                     return@launch
                 }
+
+                flowSolver = newFlowSolver
 
                 val timeRunnable = object : Runnable {
                     override fun run() {
@@ -129,8 +130,6 @@ fun FlowSolver(modifier: Modifier = Modifier) {
                 mainHandler.post(timerRunnable!!)
 
                 startTimestamp = System.nanoTime()
-                gridStates = null
-                if (visualize) gridStates = flowSolver!!.getVisualisableGrid()
 
                 flowColors = listOf(Color.Black) + flowSolver!!.getColors().map { Color(it) }
                 Log.i("Flow colors", flowColors.toString())
@@ -142,12 +141,11 @@ fun FlowSolver(modifier: Modifier = Modifier) {
 
                     if (result == null) {
                         flowStatusText = "Failed to solve flow"
-//                        gridStates = null
+//                        flowSolver = null
                         return@thenAccept
                     }
 
                     flowStatusText = "Took: ${(System.nanoTime() - startTimestamp) / 1_000_000}ms"
-                    gridStates = result
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         val vms = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
@@ -188,17 +186,12 @@ fun FlowSolver(modifier: Modifier = Modifier) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = modifier.width(200.dp).padding(horizontal = 20.dp)
+                modifier = modifier
+                    .width(150.dp)
+                    .padding(horizontal = 20.dp)
             ) {
                 Text("Slow")
                 Switch(checked = slow, onCheckedChange = {slow = !slow})
-            }
-            Row(horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = modifier.width(200.dp).padding(horizontal = 20.dp)
-            ) {
-                Text("Visualize")
-                Switch(checked = visualize, onCheckedChange = {visualize = !visualize})
             }
         }
 
@@ -213,20 +206,42 @@ fun FlowSolver(modifier: Modifier = Modifier) {
             Text(flowStatusText, modifier = modifier.padding(12.dp))
         }
 
-        gridStates?.forEachIndexed { _, ints ->
-            Row {
-                ints.forEachIndexed { _, num ->
-                    if (num >= flowColors.size) {
-                        Log.e("MainActivity", "Num exceeded flow colors. This is a problem!")
-                    }
+        if (flowSolver != null) {
+            val grid = flowSolver!!.getGrid()
+            if (grid == null) return
 
-                    Box(modifier = modifier
-                        .width(40.dp)
-                        .height(40.dp)
-                        .background(color = flowColors[num.toInt().coerceAtMost(flowColors.size - 1)])) {
+            Box(modifier = modifier
+                .width((grid.sizeX * 40).dp)
+                .height((grid.sizeY * 40).dp)
+                .drawWithContent {
+                    grid.forEach { x, y, num ->
+                        if (num.toInt() == 0) return@forEach
+
+                        val flowColor = flowColors[num.toInt().coerceAtMost(flowColors.size - 1)]
+
+                        val neighbours = grid.neighbours(x, y, num)
+
+                        if (neighbours.size < 2) {
+                            drawCircle(
+                                color = flowColor,
+                                radius = 15.dp.toPx(),
+                                Offset((y * 40 + 20).dp.toPx(), (x * 40 + 20).dp.toPx())
+                            )
+                        } else {
+                            for (dirs in neighbours) {
+                                drawLine(
+                                    color = flowColor,
+                                    start = Offset((y * 40 + 20).dp.toPx(), (x * 40 + 20).dp.toPx()),
+                                    end = Offset((y * 40 + 20 + dirs.y * 40).dp.toPx(), (x * 40 + 20 + dirs.x * 40).dp.toPx()),
+                                    strokeWidth = 15.dp.toPx(),
+                                    cap = StrokeCap.Round
+                                )
+                            }
+
+                        }
                     }
                 }
-            }
+            )
         }
     }
 

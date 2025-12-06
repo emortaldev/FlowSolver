@@ -7,15 +7,11 @@ import java.util.concurrent.CompletableFuture
 interface FlowSolverInterface {
 
     fun detect(context: Context, uri: Uri): Boolean
-    fun doSolve(): CompletableFuture<Array<ByteArray>?>
-
-    fun getGridSizeX(): Int
-    fun getGridSizeY(): Int
+    fun doSolve(): CompletableFuture<Grid?>
 
     fun getColors(): Set<Int>
 
-    fun getGrid(): Array<ByteArray>
-    fun getVisualisableGrid(): Array<ByteArray>
+    fun getGrid(): Grid?
     fun getFlows(): List<Flow>
     fun cancel()
 
