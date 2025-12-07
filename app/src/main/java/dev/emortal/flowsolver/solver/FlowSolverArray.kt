@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.get
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ForkJoinPool
+import kotlin.properties.Delegates
 
 private val GRID_START_COLORS = arrayOf(
     Color.hsv(120f, 0.422f, 0.427f).toArgb(),
@@ -22,6 +23,8 @@ class FlowSolverArray(val slow: Boolean = false) : FlowSolverInterface {
     private val uniqueColors = mutableSetOf(Color.Black.toArgb())
 
     private lateinit var grid: Grid
+
+    private var gridPxSize by Delegates.notNull<Int>()
 
     private val flows = mutableListOf<Flow>()
 
@@ -67,8 +70,8 @@ class FlowSolverArray(val slow: Boolean = false) : FlowSolverInterface {
             }
         }
 
-        val gridPixelSize = nextGridPixel - gridStartX
-        val gridSizeX = (bitmap.width - (gridStartX * 2)) / gridPixelSize
+        gridPxSize = nextGridPixel - gridStartX
+        val gridSizeX = (bitmap.width - (gridStartX * 2)) / gridPxSize
 
         // assume grid is square
         Log.i("FlowSolver", "Set grid value")
@@ -76,9 +79,9 @@ class FlowSolverArray(val slow: Boolean = false) : FlowSolverInterface {
 
         // Detect flows
         for (x in 0 until gridSizeX) {
-            val pixelY = x * gridPixelSize + gridStartY + (gridPixelSize / 2)
+            val pixelY = x * gridPxSize + gridStartY + (gridPxSize / 2)
             for (y in 0 until gridSizeX) {
-                val pixelX = y * gridPixelSize + gridStartX + (gridPixelSize / 2)
+                val pixelX = y * gridPxSize + gridStartX + (gridPxSize / 2)
 
                 val rgb = bitmap[pixelX, pixelY]
                 val color = Color(rgb)
@@ -229,6 +232,9 @@ class FlowSolverArray(val slow: Boolean = false) : FlowSolverInterface {
     override fun getColors() = uniqueColors
 
     override fun getGrid() = grid
+    override fun getGridPixelSize(): Int {
+        return gridPxSize
+    }
     override fun getFlows() = flows
     override fun cancel() {
         cancel = true

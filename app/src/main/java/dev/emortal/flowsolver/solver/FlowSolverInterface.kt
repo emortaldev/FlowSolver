@@ -12,6 +12,7 @@ interface FlowSolverInterface {
     fun getColors(): Set<Int>
 
     fun getGrid(): Grid?
+    fun getGridPixelSize(): Int
     fun getFlows(): List<Flow>
     fun cancel()
 

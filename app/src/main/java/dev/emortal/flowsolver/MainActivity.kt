@@ -210,9 +210,11 @@ fun FlowSolver(modifier: Modifier = Modifier) {
             val grid = flowSolver!!.getGrid()
             if (grid == null) return
 
+            val gridPixelSize = flowSolver!!.getGridPixelSize() / 3.0
+
             Box(modifier = modifier
-                .width((grid.sizeX * 40).dp)
-                .height((grid.sizeY * 40).dp)
+                .width((grid.sizeX * gridPixelSize).dp)
+                .height((grid.sizeY * gridPixelSize).dp)
                 .drawWithContent {
                     grid.forEach { x, y, num ->
                         if (num.toInt() == 0) return@forEach
@@ -221,19 +223,21 @@ fun FlowSolver(modifier: Modifier = Modifier) {
 
                         val neighbours = grid.neighbours(x, y, num)
 
+                        val startOffset = Offset(((y + 0.5) * gridPixelSize).dp.toPx(), ((x + 0.5) * gridPixelSize).dp.toPx())
+
                         if (neighbours.size < 2) {
                             drawCircle(
                                 color = flowColor,
-                                radius = 15.dp.toPx(),
-                                Offset((y * 40 + 20).dp.toPx(), (x * 40 + 20).dp.toPx())
+                                radius = (gridPixelSize * 0.35).dp.toPx(),
+                                startOffset
                             )
                         } else {
                             for (dirs in neighbours) {
                                 drawLine(
                                     color = flowColor,
-                                    start = Offset((y * 40 + 20).dp.toPx(), (x * 40 + 20).dp.toPx()),
-                                    end = Offset((y * 40 + 20 + dirs.y * 40).dp.toPx(), (x * 40 + 20 + dirs.x * 40).dp.toPx()),
-                                    strokeWidth = 15.dp.toPx(),
+                                    start = startOffset,
+                                    end = Offset(((y + dirs.y + 0.5) * gridPixelSize).dp.toPx(), ((x + dirs.x + 0.5) * gridPixelSize).dp.toPx()),
+                                    strokeWidth = (gridPixelSize * 0.35).dp.toPx(),
                                     cap = StrokeCap.Round
                                 )
                             }
